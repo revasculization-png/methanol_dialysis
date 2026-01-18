@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>甲醇中毒透析治療計算機 (Dr. Ho Yang)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* 基礎設定 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; padding: 20px; line-height: 1.5; }
+        .container { max-width: 850px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        
+        /* 標題樣式 - 更新為指定格式 */
+        h1 { font-size: 1.8rem; font-weight: 800; color: #2c3e50; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 15px; margin-bottom: 25px; line-height: 1.3; }
+        h1 span { display: block; font-size: 1rem; font-weight: normal; color: #555; margin-top: 5px; }
+        
+        h2 { font-size: 1.1rem; color: #1f618d; margin-top: 30px; margin-bottom: 15px; border-left: 5px solid #1f618d; padding-left: 10px; background-color: #eaf2f8; padding: 8px 10px; border-radius: 0 5px 5px 0; }
+        
+        /* 輸入與排版 */
+        .grid-box { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 10px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 0.9rem; font-weight: 600; margin-bottom: 5px; color: #555; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; text-align: center; }
+        input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
+        .fixed-value-display { padding: 10px; background-color: #e9ecef; border: 1px solid #ced4da; border-radius: 6px; text-align: center; color: #495057; font-weight: bold; }
+
+        /* 結果顯示 */
+        .result-card { background: #e8f8f5; padding: 20px; border-radius: 10px; margin-top: 20px; border: 1px solid #d1f2eb; text-align: center; }
+        .result-value { font-size: 1.4rem; font-weight: bold; color: #16a085; }
+        
+        /* 表格 */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.95rem; }
+        th, td { border: 1px solid #e1e4e8; padding: 10px; text-align: center; }
+        th { background-color: #34495e; color: white; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        
+        .safe-zone { background-color: #d4efdf !important; color: #145a32; font-weight: bold; }
+        .checkmark { color: #27ae60; font-weight: bold; margin-left: 5px; font-size: 1.1em; }
+
+        /* 圖表區 */
+        .chart-wrapper { margin-top: 25px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
+        .chart-container { position: relative; height: 350px; width: 100%; }
+        
+        /* 自訂 Checkbox 圖例樣式 */
+        .custom-legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; font-size: 0.9rem; cursor: pointer; padding: 6px 12px; border-radius: 20px; background: #fff; border: 1px solid #ddd; transition: 0.2s; user-select: none; }
+        .legend-item:hover { background: #f1f3f5; border-color: #adb5bd; }
+        .legend-item input { margin-right: 8px; transform: scale(1.2); cursor: pointer; }
+        .color-box { width: 12px; height: 12px; display: inline-block; margin-right: 6px; border-radius: 2px; }
+
+        /* 按鈕 */
+        .btn-calc { width: 100%; padding: 15px; background-color: #2980b9; color: white; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; margin-top: 30px; font-weight: bold; transition: background 0.2s; }
+        .btn-calc:hover { background-color: #2471a3; }
+        
+        /* 頁籤 */
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: #f8f9fa; cursor: pointer; font-weight: 600; color: #7f8c8d; border-radius: 8px 8px 0 0; transition: 0.3s; }
+        .tab-btn.active { background: #3498db; color: white; }
+        .tab-content { display: none; padding: 20px; background: #fdfefe; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; }
+        .tab-content.active { display: block; }
+        
+        /* Radio */
+        .radio-group { display: flex; gap: 20px; margin-bottom: 15px; justify-content: center; background: #f0f3f4; padding: 10px; border-radius: 8px; }
+        .radio-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .sub-section { display: none; }
+        .sub-section.active { display: block; }
+
+        /* 實測點輸入 */
+        .measured-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .measured-row input { flex: 1; }
+        .remove-btn { color: #e74c3c; cursor: pointer; font-weight: bold; padding: 0 10px; font-size: 1.2rem; }
+        
+        .footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>
+        甲醇中毒透析治療計算機
+        <span>VGHTPE PCC (Dr. Ho Yang)</span>
+    </h1>
+
+    <h2>1. 病人資料 (計算 Vd)</h2>
+    <div class="grid-box">
+        <div class="input-group">
+            <label>性別</label>
+            <select id="sex" onchange="updateVdAndEst()">
+                <option value="male">男</option>
+                <option value="female" selected>女</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>年齡 (歲)</label>
+            <input type="number" id="age" value="24" onchange="updateVdAndEst()">
+        </div>
+        <div class="input-group">
+            <label>身高 (cm)</label>
+            <input type="number" id="height" value="171" onchange="updateVdAndEst()">
+        </div>
+        <div class="input-group">
+            <label>體重 (kg)</label>
+            <input type="number" id="weight" value="80" onchange="updateVdAndEst()">
+        </div>
+    </div>
+    <div class="result-card" style="margin-top:5px; padding:10px;">
+        Vd (Watson's Formula): <span id="vdResult" class="result-value">--</span> L
+    </div>
+
+    <h2>2. 決定起始甲醇濃度 (C<sub>initial</sub>)</h2>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('method1')">1. 抽血數值</button>
+        <button class="tab-btn" onclick="switchTab('method2')">2. OG 推估</button>
+        <button class="tab-btn" onclick="switchTab('method3')">3. 攝入量推估</button>
+    </div>
+
+    <div id="method1" class="tab-content active">
+        <div class="input-group">
+            <label>抽血檢測甲醇濃度 (mg/dL)</label>
+            <input type="number" id="input_conc_lab" value="110" placeholder="輸入實驗室數值">
+        </div>
+    </div>
+
+    <div id="method2" class="tab-content">
+        <div class="radio-group">
+            <label><input type="radio" name="og_mode" value="direct" checked onchange="toggleOgMode()"> 直接輸入 OG</label>
+            <label><input type="radio" name="og_mode" value="calc" onchange="toggleOgMode()"> 輸入生化數值計算</label>
+        </div>
+        <div id="og_direct_panel" class="sub-section active">
+            <div class="grid-box">
+                <div class="input-group">
+                    <label>Osmolality Gap (mOsm/kg)</label>
+                    <input type="number" id="input_og_direct" value="30" oninput="calcMethod2_Direct()">
+                </div>
+            </div>
+        </div>
+        <div id="og_calc_panel" class="sub-section">
+            <div class="grid-box">
+                <div class="input-group"><label>Na</label><input type="number" id="val_na" value="140" oninput="calcMethod2_Calc()"></div>
+                <div class="input-group"><label>Glucose</label><input type="number" id="val_glu" value="100" oninput="calcMethod2_Calc()"></div>
+                <div class="input-group"><label>BUN</label><input type="number" id="val_bun" value="15" oninput="calcMethod2_Calc()"></div>
+                <div class="input-group"><label>Ethanol</label><input type="number" id="val_etoh" value="0" oninput="calcMethod2_Calc()"></div>
+                <div class="input-group"><label>Measured Osm</label><input type="number" id="val_meas_osm" value="320" oninput="calcMethod2_Calc()"></div>
+            </div>
+            <div style="background:#fef9e7; padding:10px; border-radius:5px; margin-top:10px; text-align:center;">
+                Calculated Osm: <span id="disp_calc_osm">--</span> | Gap: <span id="disp_og_gap" style="font-weight:bold; color:#e67e22;">--</span>
+            </div>
+        </div>
+        <div class="method-result">估計濃度: <span id="res_method2">--</span> mg/dL</div>
+    </div>
+
+    <div id="method3" class="tab-content">
+        <div class="grid-box">
+            <div class="input-group"><label>體積 (mL)</label><input type="number" id="input_vol" value="100" oninput="calcMethod3()"></div>
+            <div class="input-group"><label>濃度 (%)</label><input type="number" id="input_percent" value="95" oninput="calcMethod3()"></div>
+        </div>
+        <div class="method-result">估計濃度: <span id="res_method3">--</span> mg/dL</div>
+    </div>
+
+    <h2>3. 治療與透析參數</h2>
+    <div class="grid-box">
+        <div class="input-group">
+            <label>目標安全濃度 (mg/dL)</label>
+            <div class="fixed-value-display">20</div>
+        </div>
+    </div>
+    <div class="grid-box">
+        <div class="input-group">
+            <label>透析器型號</label>
+            <select id="dialyzer_select" onchange="updateKoA()">
+                <option value="1292">FX80 (KoA: 1292)</option>
+                <option value="781">F7 (KoA: 781)</option>
+                <option value="1351">FX100 (KoA: 1351)</option>
+                <option value="1584">FX120 (KoA: 1584)</option>
+                <option value="1065">170H (KoA: 1065)</option>
+                <option value="custom">自訂數值 (Custom)</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>KoA (ml/min)</label>
+            <input type="number" id="koa" value="1292" readonly>
+        </div>
+    </div>
+    <div class="grid-box">
+        <div class="input-group"><label>血液流速 Qb</label><input type="number" id="qb" value="250"></div>
+        <div class="input-group"><label>透析液流速 Qd</label><input type="number" id="qd" value="500"></div>
+    </div>
+
+    <h2>4. 實測數據驗證 (Optional)</h2>
+    <div style="background-color: #fffde7; padding: 15px; border-radius: 8px; border: 1px solid #fff59d;">
+        <p style="margin-top:0; font-size:0.9rem; color:#666;">輸入透析中抽血數值，可標記在圖上比對。</p>
+        <div id="measured_data_container">
+            <div class="measured-row">
+                <input type="number" placeholder="時間 (小時)" class="input-time">
+                <input type="number" placeholder="濃度 (mg/dL)" class="input-conc">
+                <span class="remove-btn" onclick="this.parentElement.remove()">✕</span>
+            </div>
+        </div>
+        <button onclick="addMeasuredRow()" style="background:#b0bec5; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-size:0.9rem;">+ 新增時間點</button>
+    </div>
+
+    <button class="btn-calc" onclick="calculate()">開始計算 (Calculate)</button>
+
+    <div id="resultsArea" style="display:none;">
+        <div class="result-card">
+            <div style="margin-bottom:10px; font-weight:bold; color:#2c3e50;">
+                起始濃度: <span id="final_c0" style="color:#d35400;">--</span> mg/dL
+            </div>
+            <div style="display:flex; justify-content:space-around;">
+                <div><small>Urea 清除率 K</small><br><span id="k_urea">--</span></div>
+                <div><small>Methanol 清除率 K</small><br><span id="k_meth">--</span></div>
+            </div>
+            <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
+            <div>
+                建議最少透析時間<br>
+                <span id="time_needed" style="color:#c0392b; font-size:2rem; font-weight:bold;">--</span> 小時
+            </div>
+        </div>
+        
+        <h2>5. 濃度趨勢圖</h2>
+        <div class="chart-wrapper">
+            <div class="custom-legend" id="chartLegend">
+                <label class="legend-item"><input type="checkbox" checked onchange="updateChartVisibility(this, 0)"> <span class="color-box" style="background:black;"></span>實測點 (Lab)</label>
+                <label class="legend-item"><input type="checkbox" checked onchange="updateChartVisibility(this, 1)"> <span class="color-box" style="background:#2980b9;"></span>公式1 (動力學)</label>
+                <label class="legend-item"><input type="checkbox" checked onchange="updateChartVisibility(this, 2)"> <span class="color-box" style="background:#e74c3c;"></span>公式2 (蔡老師)</label>
+                <label class="legend-item"><input type="checkbox" checked onchange="updateChartVisibility(this, 3)"> <span class="color-box" style="background:#27ae60;"></span>安全目標</label>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="concentrationChart"></canvas>
+            </div>
+        </div>
+
+        <h2>6. 詳細預測表</h2>
+        <table id="predictionTable">
+            <thead>
+                <tr>
+                    <th>時間 (hr)</th>
+                    <th>公式 1<br><small>動力學模型</small></th>
+                    <th>公式 2<br><small>蔡老師法則</small></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        Clinical Decision Support Tool. <br>
+        2025/2026 Version (Dr. Ho Yang)
+    </div>
+</div>
+
+<script>
+    let myChart = null;
+    let currentMethod = 'method1';
+    const C_TARGET_FIXED = 20;
+
+    window.onload = function() {
+        updateVdAndEst();
+        toggleOgMode();
+    };
+
+    function switchTab(methodId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        if(methodId === 'method1') document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        if(methodId === 'method2') document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        if(methodId === 'method3') document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.getElementById(methodId).classList.add('active');
+        currentMethod = methodId;
+    }
+
+    function toggleOgMode() {
+        let mode = document.querySelector('input[name="og_mode"]:checked').value;
+        if(mode === 'direct') {
+            document.getElementById('og_direct_panel').classList.add('active');
+            document.getElementById('og_calc_panel').classList.remove('active');
+            calcMethod2_Direct();
+        } else {
+            document.getElementById('og_direct_panel').classList.remove('active');
+            document.getElementById('og_calc_panel').classList.add('active');
+            calcMethod2_Calc();
+        }
+    }
+
+    function updateKoA() {
+        let select = document.getElementById('dialyzer_select');
+        let koaInput = document.getElementById('koa');
+        let val = select.value;
+        if (val === 'custom') {
+            koaInput.readOnly = false;
+            koaInput.value = '';
+            koaInput.placeholder = '輸入數值';
+            koaInput.focus();
+        } else {
+            koaInput.readOnly = true;
+            koaInput.value = val;
+        }
+    }
+
+    function getVd(sex, age, height, weight) {
+        if (sex === 'male') return 2.447 - (0.09156 * age) + (0.1074 * height) + (0.3362 * weight);
+        else return -2.097 + (0.1069 * height) + (0.2466 * weight);
+    }
+
+    function updateVdAndEst() {
+        let sex = document.getElementById('sex').value;
+        let age = parseFloat(document.getElementById('age').value) || 0;
+        let height = parseFloat(document.getElementById('height').value) || 0;
+        let weight = parseFloat(document.getElementById('weight').value) || 0;
+        let Vd = getVd(sex, age, height, weight);
+        document.getElementById('vdResult').innerText = Vd.toFixed(2);
+        toggleOgMode(); 
+        calcMethod3();
+    }
+
+    function calcMethod2_Direct() {
+        let og = parseFloat(document.getElementById('input_og_direct').value) || 0;
+        document.getElementById('res_method2').innerText = (og * 3.2).toFixed(1);
+    }
+
+    function calcMethod2_Calc() {
+        let na = parseFloat(document.getElementById('val_na').value) || 0;
+        let glu = parseFloat(document.getElementById('val_glu').value) || 0;
+        let bun = parseFloat(document.getElementById('val_bun').value) || 0;
+        let etoh = parseFloat(document.getElementById('val_etoh').value) || 0;
+        let meas = parseFloat(document.getElementById('val_meas_osm').value) || 0;
+        let calcOsm = (2 * na) + (glu / 18) + (bun / 2.8) + (etoh / 4.6);
+        let gap = meas - calcOsm;
+        document.getElementById('disp_calc_osm').innerText = calcOsm.toFixed(1);
+        document.getElementById('disp_og_gap').innerText = gap.toFixed(1);
+        document.getElementById('res_method2').innerText = (gap * 3.2).toFixed(1);
+    }
+
+    function calcMethod3() {
+        let vol = parseFloat(document.getElementById('input_vol').value) || 0;
+        let pct = parseFloat(document.getElementById('input_percent').value) || 0;
+        let Vd = parseFloat(document.getElementById('vdResult').innerText) || 35;
+        let mass_g = vol * (pct/100) * 0.7915;
+        document.getElementById('res_method3').innerText = ((mass_g / Vd) * 100).toFixed(1);
+    }
+
+    function addMeasuredRow() {
+        let div = document.createElement('div');
+        div.className = 'measured-row';
+        div.innerHTML = `
+            <input type="number" placeholder="時間 (小時)" class="input-time">
+            <input type="number" placeholder="濃度 (mg/dL)" class="input-conc">
+            <span class="remove-btn" onclick="this.parentElement.remove()">✕</span>
+        `;
+        document.getElementById('measured_data_container').appendChild(div);
+    }
+
+    function calculateClearance(KoA, Qb, Qd) {
+        if (Qb === Qd) return Qb * (KoA / (KoA + Qb));
+        let Z = (KoA * (1 - (Qb/Qd))) / Qb;
+        let ez = Math.exp(Z);
+        return Qb * (ez - 1) / (ez - (Qb/Qd));
+    }
+
+    function calculate() {
+        let C0 = 0;
+        if(currentMethod === 'method1') C0 = parseFloat(document.getElementById('input_conc_lab').value);
+        else if(currentMethod === 'method2') C0 = parseFloat(document.getElementById('res_method2').innerText);
+        else if(currentMethod === 'method3') C0 = parseFloat(document.getElementById('res_method3').innerText);
+
+        if(isNaN(C0) || C0 <= 0) { alert("請確認起始濃度！"); return; }
+        document.getElementById('final_c0').innerText = C0.toFixed(1);
+
+        let C_target = C_TARGET_FIXED;
+        let KoA = parseFloat(document.getElementById('koa').value);
+        let Qb = parseFloat(document.getElementById('qb').value);
+        let Qd = parseFloat(document.getElementById('qd').value);
+        let Vd = parseFloat(document.getElementById('vdResult').innerText);
+
+        let K_urea = calculateClearance(KoA, Qb, Qd);
+        let K_meth = K_urea * 0.8; 
+        document.getElementById('k_urea').innerText = K_urea.toFixed(1);
+        document.getElementById('k_meth').innerText = K_meth.toFixed(1);
+
+        let K_L_hr = K_meth * 60 / 1000;
+        let time_hours = (Vd / K_L_hr) * Math.log(C0 / C_target);
+        if (time_hours < 0) time_hours = 0;
+        document.getElementById('time_needed').innerText = time_hours.toFixed(2);
+
+        let measuredPoints = [];
+        document.querySelectorAll('.measured-row').forEach(row => {
+            let t = parseFloat(row.querySelector('.input-time').value);
+            let c = parseFloat(row.querySelector('.input-conc').value);
+            if(!isNaN(t) && !isNaN(c)) measuredPoints.push({x: t, y: c});
+        });
+
+        let tbody = document.querySelector('#predictionTable tbody');
+        tbody.innerHTML = "";
+        let data1 = [], data2 = [], dataSafe = [];
+        
+        for (let t = 0; t <= 12; t += 0.5) {
+            let C1 = C0 * Math.exp(-1 * K_L_hr * t / Vd);
+            let C2 = C0 * Math.pow(0.5, t/2);
+            
+            data1.push({x: t, y: C1});
+            data2.push({x: t, y: C2});
+            dataSafe.push({x: t, y: C_target});
+
+            if (Number.isInteger(t) && t % 2 === 0) {
+                let check1 = C1 < C_target ? '<span class="checkmark">✅</span>' : '';
+                let check2 = C2 < C_target ? '<span class="checkmark">✅</span>' : '';
+                let class1 = C1 < C_target ? "safe-zone" : "";
+                let class2 = C2 < C_target ? "safe-zone" : "";
+                let row = `<tr>
+                    <td>${t}</td>
+                    <td class="${class1}">${C1.toFixed(1)}${check1}</td>
+                    <td class="${class2}">${C2.toFixed(1)}${check2}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            }
+        }
+
+        document.getElementById('resultsArea').style.display = 'block';
+        drawChart(data1, data2, dataSafe, measuredPoints);
+        document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateChartVisibility(checkbox, index) {
+        if(!myChart) return;
+        if(checkbox.checked) {
+            myChart.show(index);
+        } else {
+            myChart.hide(index);
+        }
+    }
+
+    function drawChart(d1, d2, dSafe, dMeasured) {
+        const ctx = document.getElementById('concentrationChart').getContext('2d');
+        if (myChart) myChart.destroy();
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: '實測點 (Lab)',
+                        data: dMeasured,
+                        backgroundColor: 'black',
+                        borderColor: 'black',
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        showLine: false,
+                        type: 'scatter'
+                    },
+                    {
+                        label: '公式1 (動力學)',
+                        data: d1,
+                        borderColor: '#2980b9',
+                        backgroundColor: 'rgba(41, 128, 185, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4
+                    },
+                    {
+                        label: '公式2 (蔡老師)',
+                        data: d2,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        borderDash: [5, 5],
+                        tension: 0.4
+                    },
+                    {
+                        label: '安全目標',
+                        data: dSafe,
+                        borderColor: '#27ae60',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        borderDash: [2, 2]
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            title: function(context) {
+                                return '透析時間: ' + context[0].parsed.x + ' 小時';
+                            },
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toFixed(1) + ' mg/dL';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: { display: true, text: '透析時間 (小時)' },
+                        min: 0,
+                        max: 12
+                    },
+                    y: {
+                        title: { display: true, text: '濃度 (mg/dL)' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Sync initial checkbox state
+        let checkboxes = document.querySelectorAll('.custom-legend input');
+        checkboxes.forEach((cb, i) => {
+            if(!cb.checked) {
+                myChart.hide(i);
+            }
+        });
+    }
+</script>
+</body>
+</html>
