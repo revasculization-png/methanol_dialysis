@@ -10,7 +10,7 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; padding: 20px; line-height: 1.5; }
         .container { max-width: 850px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         
-        /* 標題樣式 - 更新為指定格式 */
+        /* 標題樣式 */
         h1 { font-size: 1.8rem; font-weight: 800; color: #2c3e50; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 15px; margin-bottom: 25px; line-height: 1.3; }
         h1 span { display: block; font-size: 1rem; font-weight: normal; color: #555; margin-top: 5px; }
         
@@ -383,6 +383,10 @@
         if (time_hours < 0) time_hours = 0;
         document.getElementById('time_needed').innerText = time_hours.toFixed(2);
 
+        // 動態時間軸邏輯：至少包含建議時間 + 4小時緩衝，且不小於12小時
+        let plotMaxTime = Math.max(12, Math.ceil(time_hours) + 4);
+
+        // 實測數據收集
         let measuredPoints = [];
         document.querySelectorAll('.measured-row').forEach(row => {
             let t = parseFloat(row.querySelector('.input-time').value);
@@ -394,7 +398,7 @@
         tbody.innerHTML = "";
         let data1 = [], data2 = [], dataSafe = [];
         
-        for (let t = 0; t <= 12; t += 0.5) {
+        for (let t = 0; t <= plotMaxTime; t += 0.5) {
             let C1 = C0 * Math.exp(-1 * K_L_hr * t / Vd);
             let C2 = C0 * Math.pow(0.5, t/2);
             
@@ -402,6 +406,7 @@
             data2.push({x: t, y: C2});
             dataSafe.push({x: t, y: C_target});
 
+            // 表格每2小時，或剛好等於建議時間附近
             if (Number.isInteger(t) && t % 2 === 0) {
                 let check1 = C1 < C_target ? '<span class="checkmark">✅</span>' : '';
                 let check2 = C2 < C_target ? '<span class="checkmark">✅</span>' : '';
@@ -417,7 +422,7 @@
         }
 
         document.getElementById('resultsArea').style.display = 'block';
-        drawChart(data1, data2, dataSafe, measuredPoints);
+        drawChart(data1, data2, dataSafe, measuredPoints, plotMaxTime);
         document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -430,7 +435,7 @@
         }
     }
 
-    function drawChart(d1, d2, dSafe, dMeasured) {
+    function drawChart(d1, d2, dSafe, dMeasured, maxX) {
         const ctx = document.getElementById('concentrationChart').getContext('2d');
         if (myChart) myChart.destroy();
 
@@ -510,7 +515,7 @@
                         type: 'linear',
                         title: { display: true, text: '透析時間 (小時)' },
                         min: 0,
-                        max: 12
+                        max: maxX // 動態最大值
                     },
                     y: {
                         title: { display: true, text: '濃度 (mg/dL)' },
@@ -520,7 +525,7 @@
             }
         });
 
-        // Sync initial checkbox state
+        // 初始化 Checkbox 狀態
         let checkboxes = document.querySelectorAll('.custom-legend input');
         checkboxes.forEach((cb, i) => {
             if(!cb.checked) {
